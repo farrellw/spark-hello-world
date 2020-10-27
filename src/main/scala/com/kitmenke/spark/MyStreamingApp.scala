@@ -1,9 +1,8 @@
 package com.kitmenke.spark
 
 import org.apache.log4j.Logger
-import org.apache.spark.sql.functions._
 import org.apache.spark.sql.streaming.{OutputMode, Trigger}
-import org.apache.spark.sql.types.{IntegerType, StringType, StructType, TimestampType}
+import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 /**
