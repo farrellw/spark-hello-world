@@ -14,22 +14,8 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 object MyStreamingApp {
   lazy val logger: Logger = Logger.getLogger(this.getClass)
   val jobName = "MyStreamingApp"
-  val schema: StructType = new StructType()
-    .add("marketplace", StringType, nullable = true)
-    .add("customer_id", IntegerType, nullable = true)
-    .add("review_id", StringType, nullable = true)
-    .add("product_id", StringType, nullable = true)
-    .add("product_parent", IntegerType, nullable = true)
-    .add("product_title", StringType, nullable = true)
-    .add("product_category", StringType, nullable = true)
-    .add("star_rating", IntegerType, nullable = true)
-    .add("helpful_votes", IntegerType, nullable = true)
-    .add("total_votes", IntegerType, nullable = true)
-    .add("vine", StringType, nullable = true)
-    .add("verified_purchase", StringType, nullable = true)
-    .add("review_headline", StringType, nullable = true)
-    .add("review_body", StringType, nullable = true)
-    .add("review_date", TimestampType, nullable = true)
+  // TODO: define the schema for parsing data from Kafka
+  val schema: StructType = ???
 
   def main(args: Array[String]): Unit = {
     try {
@@ -60,7 +46,7 @@ object MyStreamingApp {
   }
 
   def compute(df: DataFrame): DataFrame = {
-    df.select(from_json(df("value"), schema) as "js")
-      .agg(round(avg("js.star_rating"), 2) as "avg_star_rating")
+    // TODO: implement your logic here
+    df
   }
 }

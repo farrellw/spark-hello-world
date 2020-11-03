@@ -1,7 +1,11 @@
 package com.kitmenke.spark
 
 import com.holdenkarau.spark.testing.DataFrameSuiteBase
+import org.apache.spark.sql
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 import org.scalatest.FunSuite
+
 
 class MyStreamingAppTests extends FunSuite with DataFrameSuiteBase {
   import sqlContext.implicits._
@@ -10,15 +14,73 @@ class MyStreamingAppTests extends FunSuite with DataFrameSuiteBase {
     // create some sample data to run through our program
     val input = sc.parallelize(
       List[String](
-    "{\"marketplace\":\"US\",\"customer_id\":1,\"review_id\":\"R26ZK6XLDT8DDS\",\"product_id\":\"B000L70MQO\",\"product_parent\":216773674,\"product_title\":\"Product 1\",\"product_category\":\"Toys\",\"star_rating\":5,\"helpful_votes\":1,\"total_votes\":4,\"vine\":\"N\",\"verified_purchase\":\"Y\",\"review_headline\":\"Five Stars\",\"review_body\":\"Cool.\",\"review_date\":\"2015-01-12T00:00:00.000-06:00\"}\n",
-        "{\"marketplace\":\"US\",\"customer_id\":2,\"review_id\":\"R3N4AL9Y48M9HB\",\"product_id\":\"B002SW4856\",\"product_parent\":914652864,\"product_title\":\"Product 2\",\"product_category\":\"Toys\",\"star_rating\":1,\"helpful_votes\":2,\"total_votes\":5,\"vine\":\"N\",\"verified_purchase\":\"Y\",\"review_headline\":\"1 Star\",\"review_body\":\"Bad.\",\"review_date\":\"2015-01-12T00:00:00.000-06:00\"}\n",
-        "{\"marketplace\":\"US\",\"customer_id\":3,\"review_id\":\"R1UZ1DLRGUY2BT\",\"product_id\":\"B00IR7NKWS\",\"product_parent\":301509474,\"product_title\":\"Product 2\",\"product_category\":\"Toys\",\"star_rating\":5,\"helpful_votes\":3,\"total_votes\":6,\"vine\":\"N\",\"verified_purchase\":\"Y\",\"review_headline\":\"Five Stars\",\"review_body\":\"Great!\",\"review_date\":\"2015-01-12T00:00:00.000-06:00\"}\n"
+    "{\"name\":\"Jean-Luc Picard\",\"birth_year\": 2305}",
+         "{\"name\":\"William Riker\",\"birth_year\": 2335}",
+         "{\"name\":\"Deanna Troi\",\"birth_year\": 2336}"
     )).toDF("value")
+    input.printSchema()
+    input.show()
+    // define our JSONs schema
+    val schema = new StructType()
+      .add("name", StringType, nullable = true)
+      .add("birth_year", IntegerType, nullable = true)
 
-    val expected = sc.parallelize(List(Some(3.67))).toDF("avg_star_rating")
-    val actual = MyStreamingApp.compute(input)
-    actual.printSchema()
-    actual.show()
-    assertDataFrameEquals(actual, expected) // equal
+    val result = input.select(sql.functions.from_json(input("value"), schema))
+    result.printSchema()
+    result.show(truncate = false)
+  }
+
+  test("should parse dates") {
+    // create some sample data to run through our program
+    val df = sc.parallelize(List[String]("20200401", "20200501", "20200601"))
+      .toDF("dates")
+    // using the to_date spark sql function, convert the string value into a
+    import org.apache.spark.sql.functions.to_date
+    val result = df.select(to_date(df("dates"), "yyyyMMdd"))
+    result.printSchema()
+    result.show()
+  }
+
+  test("should drop duplicates") {
+    val schema = new StructType()
+      .add("row", StringType, nullable = false)
+      .add("code", StringType, nullable = false)
+    // create some sample data to run through our program
+    val rdd = sc.parallelize(Seq(
+      Row("row1", "XFH"),
+      Row("row2", "ABC"),
+      Row("row3", "XFH"),
+    ))
+    val df = sqlContext.createDataFrame(rdd, schema)
+    df.show()
+    val result = df.dropDuplicates("code")
+    result.printSchema()
+    result.show()
+  }
+
+  test("should join two dataframes") {
+    val schema1 = new StructType()
+      .add("ColumnA", StringType, nullable = false)
+      .add("ColumnB", StringType, nullable = false)
+    // create some sample data to run through our program
+    val rdd1 = sc.parallelize(Seq(
+      Row("a1", "b1"),
+      Row("a2", "b2"),
+      Row("a3", "b3"),
+    ))
+    val df1 = sqlContext.createDataFrame(rdd1, schema1)
+    val schema2 = new StructType()
+      .add("ColumnA", StringType, nullable = false)
+      .add("ColumnC", StringType, nullable = false)
+    val rdd2 = sc.parallelize(Seq(
+      Row("a1", "c1"),
+      Row("a2", "c2"),
+      Row("a4", "c3"),
+    ))
+    val df2 = sqlContext.createDataFrame(rdd2, schema2)
+
+    val result = df1.join(df2, df1("ColumnA") === df2("ColumnA"), "outer")
+    result.printSchema()
+    result.show()
   }
 }
